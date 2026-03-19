@@ -1,0 +1,357 @@
+"""Toolset management functionality for Nuke.
+
+Refactored from original base.py implementation.
+"""
+
+import os
+import logging
+import shutil
+
+import nuke
+import nukescripts
+
+from .lib import get_toolset_sources, ensure_folder
+
+log = logging.getLogger("ayon.hbay_nuke_toolsets")
+
+
+class CreateToolsetsPanel(nukescripts.PythonPanel):
+    """Panel for creating shared toolsets in Nuke.
+
+    Allows artists to publish toolsets to shared locations
+    organized by project and folder structure.
+    """
+
+    def __init__(self):
+        nukescripts.PythonPanel.__init__(
+            self,
+            'Create a Shared ToolSet',
+            'com.hbay.CreateSharedToolset'
+        )
+
+        # Get toolset sources from settings
+        self.roots = get_toolset_sources()
+        self.user_folders = []
+
+        # Build folder list for each source
+        for source_name, root_path in self.roots.items():
+            self._build_folder_list(root_path, source_name)
+
+        # Create UI knobs
+        self.menu_choice = nuke.Enumeration_Knob(
+            'menuItemChoice',
+            'ToolSets location',
+            self.user_folders
+        )
+        self.menu_choice.setTooltip(
+            "The location where the ToolSet will be stored. "
+            "Select 'root' to place in the main location."
+        )
+
+        self.menu_path = nuke.String_Knob('itemName', 'ToolSet name:')
+        self.menu_path.setFlag(0x00001000)
+        self.menu_path.setTooltip(
+            "ToolSet name. Use '/' to create submenus, "
+            "e.g., '3D/Basic3D' creates a '3D' submenu with 'Basic3D' toolset."
+        )
+
+        self.ok_button = nuke.PyScript_Knob('create', 'Create')
+        self.ok_button.setFlag(0x00001000)
+
+        self.cancel_button = nuke.PyScript_Knob('cancel', 'Cancel')
+
+        # Add knobs to panel
+        self.addKnob(self.menu_choice)
+        self.addKnob(self.menu_path)
+        self.addKnob(self.ok_button)
+        self.addKnob(self.cancel_button)
+
+        log.debug(f"CreateToolsetsPanel initialized with roots: {self.roots}")
+
+    def _build_folder_list(self, full_path, menu_path):
+        """Recursively build list of available folders.
+
+        Args:
+            full_path (str): Filesystem path to scan
+            menu_path (str): Menu path representation
+        """
+        # Ensure directory exists
+        if not os.path.isdir(full_path):
+            ensure_folder(full_path)
+            return
+
+        try:
+            file_contents = sorted(os.listdir(str(full_path)), key=str.lower)
+        except OSError as e:
+            log.warning(f"Cannot read directory {full_path}: {e}")
+            return
+
+        for item in file_contents:
+            item_path = os.path.join(full_path, item)
+            if os.path.isdir(item_path):
+                # Avoid duplicates in root
+                if menu_path == item:
+                    self.user_folders.append(item)
+                    self.roots[item] = item_path.replace("\\", "/")
+                else:
+                    menu_name = f"{menu_path}/{item}"
+                    self.user_folders.append(menu_name)
+                    self.roots[menu_name] = item_path.replace("\\", "/")
+                    # Recurse into subdirectory
+                    self._build_folder_list(item_path, menu_name)
+
+    def _create_preset(self):
+        """Create the toolset file in the selected location."""
+        selected_location = str(self.menu_choice.value())
+        toolset_name = str(self.menu_path.value())
+
+        if not toolset_name:
+            nuke.message("Please enter a toolset name")
+            return
+
+        root = self.roots.get(selected_location)
+        if not root:
+            nuke.message(f"Invalid location: {selected_location}")
+            return
+
+        try:
+            # Use Nuke's built-in createToolset function
+            if nuke.createToolset(filename=toolset_name, overwrite=1, rootPath=root):
+                # Nuke creates in a ToolSets subdirectory, move it to root
+                temp_path = os.path.join(root, "ToolSets", f"{toolset_name}.nk")
+                final_path = os.path.join(root, f"{toolset_name}.nk")
+
+                temp_path = temp_path.replace("\\", "/")
+                final_path = final_path.replace("\\", "/")
+
+                ensure_folder(final_path)
+
+                if os.path.exists(temp_path):
+                    shutil.move(temp_path, final_path)
+                    log.info(f"Created toolset: {final_path}")
+
+                    # Clean up temp ToolSets directory
+                    toolsets_dir = os.path.join(root, "ToolSets")
+                    if os.path.isdir(toolsets_dir):
+                        try:
+                            shutil.rmtree(toolsets_dir)
+                        except OSError as e:
+                            log.warning(f"Failed to remove temp directory: {e}")
+
+                self.finishModalDialog(True)
+            else:
+                nuke.message("Failed to create toolset")
+
+        except Exception as e:
+            log.error(f"Error creating toolset: {e}", exc_info=True)
+            nuke.message(f"Error creating toolset: {str(e)}")
+
+    def _get_preset_path(self):
+        """Update menu path based on selection."""
+        self.menu_path.setValue("")
+
+    def knobChanged(self, knob):
+        """Handle knob changes in the panel."""
+        if knob == self.ok_button:
+            self._create_preset()
+        elif knob == self.cancel_button:
+            self.finishModalDialog(False)
+        elif knob == self.menu_choice:
+            self._get_preset_path()
+
+
+def create_toolsets_panel():
+    """Show the create toolsets panel.
+
+    Returns:
+        bool: True if panel was confirmed, False otherwise
+    """
+    if not nuke.nodesSelected():
+        nuke.message("No nodes are selected")
+        return False
+
+    result = CreateToolsetsPanel().showModalDialog()
+
+    # Refresh menu if toolset was created
+    if result:
+        refresh_toolsets_menu()
+
+    return result
+
+
+def delete_toolset(root_path, file_name):
+    """Delete a toolset file.
+
+    Args:
+        root_path (str): Root path of the toolset location
+        file_name (str): Full path to the toolset file
+    """
+    if nuke.ask(f'Are you sure you want to delete ToolSet {os.path.basename(file_name)}?'):
+        try:
+            os.remove(file_name)
+            log.info(f"Deleted toolset: {file_name}")
+            refresh_toolsets_menu()
+        except OSError as e:
+            log.error(f"Failed to delete toolset: {e}")
+            nuke.message(f"Failed to delete toolset: {str(e)}")
+
+
+def refresh_toolsets_menu():
+    """Refresh the shared toolsets menu."""
+    toolbar = nuke.menu("Nodes")
+    menu = toolbar.findItem("sharedToolSets")
+
+    if menu:
+        menu.clearMenu()
+        setup_toolsets_menu(toolbar)
+        log.info("Toolsets menu refreshed")
+
+
+def setup_toolsets_menu(toolbar):
+    """Setup the shared toolsets menu in Nuke.
+
+    Args:
+        toolbar: Nuke toolbar menu object
+    """
+    menu = toolbar.addMenu("sharedToolSets", "sharedToolSets.png")
+
+    # Add control commands
+    menu.addCommand(
+        "Create",
+        "from hbay_nuke_toolsets.api import create_toolsets_panel; "
+        "create_toolsets_panel()",
+        icon="ToolsetCreate.png"
+    )
+    menu.addCommand(
+        "Refresh",
+        "from hbay_nuke_toolsets.api import refresh_toolsets_menu; "
+        "refresh_toolsets_menu()"
+    )
+    menu.addCommand("-", "", "")
+
+    # Populate with available toolsets
+    has_toolsets = _populate_toolsets_menu(menu, delete_mode=False)
+
+    # Add delete menu if enabled in settings
+    if has_toolsets:
+        try:
+            from ayon_core.addon import AddonsManager
+            manager = AddonsManager()
+            addon = manager.get_enabled_addon("hbay_nuke_toolsets")
+
+            if addon:
+                settings = addon.get_studio_settings()
+                if settings.get("enable_delete_mode", False):
+                    menu.addCommand("-", "", "")
+                    delete_menu = menu.addMenu("Delete", "ToolsetDelete.png")
+                    _populate_toolsets_menu(delete_menu, delete_mode=True)
+        except Exception as e:
+            log.warning(f"Failed to check delete mode setting: {e}")
+
+
+def _populate_toolsets_menu(menu, delete_mode=False):
+    """Populate menu with available toolsets.
+
+    Args:
+        menu: Nuke menu object
+        delete_mode (bool): If True, add delete commands instead of load
+
+    Returns:
+        bool: True if any toolsets were found
+    """
+    all_toolsets_list = []
+    sources = get_toolset_sources()
+    has_toolsets = False
+
+    # Add toolsets from each source
+    for source_name, root_path in sources.items():
+        if os.path.isdir(root_path):
+            if _create_toolset_menu_items(
+                menu,
+                root_path,
+                root_path,
+                delete_mode,
+                all_toolsets_list
+            ):
+                has_toolsets = True
+
+    return has_toolsets
+
+
+def _create_toolset_menu_items(menu, root_path, full_path, delete_mode, all_toolsets_list):
+    """Recursively create menu items for toolsets.
+
+    Args:
+        menu: Nuke menu object
+        root_path (str): Root path for this source
+        full_path (str): Current directory being scanned
+        delete_mode (bool): If True, create delete commands
+        all_toolsets_list (list): List tracking added toolsets
+
+    Returns:
+        bool: True if any items were added
+    """
+    try:
+        file_contents = sorted(os.listdir(str(full_path)), key=str.lower)
+    except OSError as e:
+        log.warning(f"Cannot read directory {full_path}: {e}")
+        return False
+
+    exclude_paths = nuke.getToolsetExcludePaths()
+    has_items = False
+
+    if not file_contents:
+        return False
+
+    # First pass: add directories as submenus
+    for item in file_contents:
+        new_path = os.path.join(full_path, item).replace("\\", "/")
+
+        # Check if path should be ignored
+        ignore = False
+        if ".svn" in new_path or ".git" in new_path:
+            ignore = True
+        else:
+            for exclude in exclude_paths:
+                exclude = exclude.replace("\\", "/")
+                if exclude in new_path:
+                    ignore = True
+                    break
+
+        if os.path.isdir(new_path) and not ignore:
+            if os.listdir(new_path):
+                all_toolsets_list.append(item)
+                submenu = menu.addMenu(item)
+                if _create_toolset_menu_items(
+                    submenu,
+                    root_path,
+                    new_path,
+                    delete_mode,
+                    all_toolsets_list
+                ):
+                    has_items = True
+
+    # Second pass: add .nk files as commands
+    for item in file_contents:
+        full_file_path = os.path.join(full_path, item).replace("\\", "/")
+
+        if not os.path.isdir(full_file_path):
+            if item.endswith(".nk"):
+                toolset_name = item[:-3]  # Remove .nk extension
+
+                if delete_mode:
+                    menu.addCommand(
+                        toolset_name,
+                        f'from hbay_nuke_toolsets.api import delete_toolset; '
+                        f'delete_toolset("{root_path}", "{full_file_path}")'
+                    )
+                    has_items = True
+                else:
+                    menu.addCommand(
+                        toolset_name,
+                        f'nuke.loadToolset("{full_file_path}")'
+                    )
+                    log.debug(f"Added toolset: {full_file_path}")
+                    has_items = True
+
+    return has_items

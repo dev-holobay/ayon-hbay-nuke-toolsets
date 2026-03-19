@@ -1,0 +1,13 @@
+[tool.poetry]
+name = "ayon-hbay-nuke-toolsets"
+version = "0.1.0"
+description = "AYON addon for Nuke shared toolsets"
+authors = ["HBAY Studios"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
