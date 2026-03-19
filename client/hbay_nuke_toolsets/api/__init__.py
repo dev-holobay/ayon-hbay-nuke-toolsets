@@ -13,6 +13,7 @@ from .toolsets import (
     setup_toolsets_menu,
     refresh_toolsets_menu,
     create_toolsets_panel,
+    create_toolset_in_context,
     delete_toolset,
 )
 
@@ -24,5 +25,6 @@ __all__ = [
     "setup_toolsets_menu",
     "refresh_toolsets_menu",
     "create_toolsets_panel",
+    "create_toolset_in_context",
     "delete_toolset",
 ]

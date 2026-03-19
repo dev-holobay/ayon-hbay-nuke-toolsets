@@ -10,6 +10,10 @@ import shutil
 import nuke
 import nukescripts
 
+from ayon_core.pipeline import get_current_project_name, get_current_context, Anatomy
+
+from ayon_core.settings import get_project_settings
+
 from .lib import get_toolset_sources, ensure_folder
 
 log = logging.getLogger("ayon.hbay_nuke_toolsets")
@@ -177,6 +181,130 @@ def create_toolsets_panel():
     return result
 
 
+def create_toolset_in_context():
+    """Create a toolset using the current AYON context path.
+
+    Uses the current context hierarchy (asset/shot path) as the folder structure.
+    Example: /assets/props/eagle/compositing -> {root[work]}/sharedToolSets/assets/props/eagle/
+
+    Returns:
+        bool: True if toolset was created successfully
+    """
+    if not nuke.nodesSelected():
+        nuke.message("No nodes are selected")
+        return False
+
+    try:
+        # Get current context
+        context = get_current_context()
+        project_name = get_current_project_name()
+
+        if not context or not project_name:
+            nuke.message("No AYON context found. Please work in a valid AYON context.")
+            return False
+
+        # Build context path from hierarchy
+        context_parts = []
+
+        # Add folder type and name (e.g., assets, shots)
+        if context.get("folder"):
+            folder_data = context["folder"]
+            folder_path = folder_data.get("path", "").strip("/")
+            if folder_path:
+                context_parts.append(folder_path)
+
+        if not context_parts:
+            nuke.message("Cannot determine context path from current AYON context.")
+            return False
+
+        context_path = "/".join(context_parts)
+
+        all_project_settings = get_project_settings(project_name)
+        project_settings = all_project_settings[
+            "hbay_nuke_toolsets"]
+        template = project_settings.get("toolsets_path_template", "{root[work]}/{project[name]}/sharedToolSets")
+
+        # Get anatomy and resolve template
+        anatomy = Anatomy(project_name)
+        base_path = template.format(
+            root=anatomy.roots,
+            project={"name": project_name, "code": project_name}
+        )
+
+        # Add context path to base
+        toolset_dir = os.path.join(base_path, context_path).replace("\\", "/")
+
+        # Ensure directory exists
+        ensure_folder(toolset_dir)
+
+        # Show simple dialog for toolset name
+        toolset_name = nuke.getInput("Toolset name:", "")
+
+        if not toolset_name:
+            return False
+
+        # Create the toolset
+        result = _create_toolset_file(toolset_name, toolset_dir, context_path)
+
+        if result:
+            refresh_toolsets_menu()
+            nuke.message(f"Toolset created successfully in:\n{context_path}/")
+
+        return result
+
+    except Exception as e:
+        log.error(f"Failed to create toolset in context: {e}", exc_info=True)
+        nuke.message(f"Error: {str(e)}")
+        return False
+
+
+def _create_toolset_file(toolset_name, toolset_dir, context_label=""):
+    """Create a toolset file in the specified directory.
+
+    Args:
+        toolset_name (str): Name of the toolset
+        toolset_dir (str): Directory path where toolset should be created
+        context_label (str): Optional label for logging/display
+
+    Returns:
+        bool: True if successful
+    """
+    try:
+        # Use Nuke's built-in createToolset function
+        if nuke.createToolset(filename=toolset_name, overwrite=1, rootPath=toolset_dir):
+            # Nuke creates in a ToolSets subdirectory, move it to root
+            temp_path = os.path.join(toolset_dir, "ToolSets", f"{toolset_name}.nk")
+            final_path = os.path.join(toolset_dir, f"{toolset_name}.nk")
+
+            temp_path = temp_path.replace("\\", "/")
+            final_path = final_path.replace("\\", "/")
+
+            ensure_folder(final_path)
+
+            if os.path.exists(temp_path):
+                shutil.move(temp_path, final_path)
+                log_path = f"{context_label}/{toolset_name}.nk" if context_label else final_path
+                log.info(f"Created toolset: {log_path}")
+
+                # Clean up temp ToolSets directory
+                toolsets_dir = os.path.join(toolset_dir, "ToolSets")
+                if os.path.isdir(toolsets_dir):
+                    try:
+                        shutil.rmtree(toolsets_dir)
+                    except OSError as e:
+                        log.warning(f"Failed to remove temp directory: {e}")
+
+            return True
+        else:
+            nuke.message("Failed to create toolset")
+            return False
+
+    except Exception as e:
+        log.error(f"Error creating toolset file: {e}", exc_info=True)
+        nuke.message(f"Error creating toolset: {str(e)}")
+        return False
+
+
 def delete_toolset(root_path, file_name):
     """Delete a toolset file.
 
@@ -218,6 +346,12 @@ def setup_toolsets_menu(toolbar):
         "Create",
         "from hbay_nuke_toolsets.api import create_toolsets_panel; "
         "create_toolsets_panel()",
+        icon="ToolsetCreate.png"
+    )
+    menu.addCommand(
+        "Create in Context",
+        "from hbay_nuke_toolsets.api import create_toolset_in_context; "
+        "create_toolset_in_context()",
         icon="ToolsetCreate.png"
     )
     menu.addCommand(
