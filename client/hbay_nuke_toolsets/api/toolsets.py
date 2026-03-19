@@ -34,7 +34,8 @@ class CreateToolsetsPanel(nukescripts.PythonPanel):
         self.user_folders = []
 
         # Build folder list for each source
-        for source_name, root_path in self.roots.items():
+        # Use list() to create a copy since _build_folder_list modifies self.roots
+        for source_name, root_path in list(self.roots.items()):
             self._build_folder_list(root_path, source_name)
 
         # Create UI knobs
@@ -85,7 +86,8 @@ class CreateToolsetsPanel(nukescripts.PythonPanel):
         except OSError as e:
             log.warning(f"Cannot read directory {full_path}: {e}")
             return
-
+        if not menu_path in self.user_folders:
+            self.user_folders.append(menu_path)
         for item in file_contents:
             item_path = os.path.join(full_path, item)
             if os.path.isdir(item_path):
@@ -250,7 +252,7 @@ def setup_toolsets_menu(toolbar):
 
 
 def _populate_toolsets_menu(menu, delete_mode=False):
-    """Populate menu with available toolsets.
+    """Populate menu with available toolsets organized by project.
 
     Args:
         menu: Nuke menu object
@@ -263,11 +265,14 @@ def _populate_toolsets_menu(menu, delete_mode=False):
     sources = get_toolset_sources()
     has_toolsets = False
 
-    # Add toolsets from each source
+    # Add toolsets from each source with project as submenu
     for source_name, root_path in sources.items():
         if os.path.isdir(root_path):
+            # Create a submenu for this project
+            project_menu = menu.addMenu(source_name)
+
             if _create_toolset_menu_items(
-                menu,
+                project_menu,
                 root_path,
                 root_path,
                 delete_mode,
