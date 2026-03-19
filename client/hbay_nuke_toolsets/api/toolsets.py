@@ -50,22 +50,14 @@ class CreateToolsetsPanel(nukescripts.PythonPanel):
         )
 
         self.menu_path = nuke.String_Knob('itemName', 'ToolSet name:')
-        self.menu_path.setFlag(0x00001000)
         self.menu_path.setTooltip(
             "ToolSet name. Use '/' to create submenus, "
             "e.g., '3D/Basic3D' creates a '3D' submenu with 'Basic3D' toolset."
         )
 
-        self.ok_button = nuke.PyScript_Knob('create', 'Create')
-        self.ok_button.setFlag(0x00001000)
-
-        self.cancel_button = nuke.PyScript_Knob('cancel', 'Cancel')
-
         # Add knobs to panel
         self.addKnob(self.menu_choice)
         self.addKnob(self.menu_path)
-        self.addKnob(self.ok_button)
-        self.addKnob(self.cancel_button)
 
         log.debug(f"CreateToolsetsPanel initialized with roots: {self.roots}")
 
@@ -103,18 +95,22 @@ class CreateToolsetsPanel(nukescripts.PythonPanel):
                     self._build_folder_list(item_path, menu_name)
 
     def _create_preset(self):
-        """Create the toolset file in the selected location."""
+        """Create the toolset file in the selected location.
+
+        Returns:
+            bool: True if toolset was created successfully
+        """
         selected_location = str(self.menu_choice.value())
         toolset_name = str(self.menu_path.value())
 
         if not toolset_name:
             nuke.message("Please enter a toolset name")
-            return
+            return False
 
         root = self.roots.get(selected_location)
         if not root:
             nuke.message(f"Invalid location: {selected_location}")
-            return
+            return False
 
         try:
             # Use Nuke's built-in createToolset function
@@ -140,13 +136,15 @@ class CreateToolsetsPanel(nukescripts.PythonPanel):
                         except OSError as e:
                             log.warning(f"Failed to remove temp directory: {e}")
 
-                self.finishModalDialog(True)
+                return True
             else:
                 nuke.message("Failed to create toolset")
+                return False
 
         except Exception as e:
             log.error(f"Error creating toolset: {e}", exc_info=True)
             nuke.message(f"Error creating toolset: {str(e)}")
+            return False
 
     def _get_preset_path(self):
         """Update menu path based on selection."""
@@ -154,11 +152,7 @@ class CreateToolsetsPanel(nukescripts.PythonPanel):
 
     def knobChanged(self, knob):
         """Handle knob changes in the panel."""
-        if knob == self.ok_button:
-            self._create_preset()
-        elif knob == self.cancel_button:
-            self.finishModalDialog(False)
-        elif knob == self.menu_choice:
+        if knob == self.menu_choice:
             self._get_preset_path()
 
 
@@ -172,10 +166,12 @@ def create_toolsets_panel():
         nuke.message("No nodes are selected")
         return False
 
-    result = CreateToolsetsPanel().showModalDialog()
+    panel = CreateToolsetsPanel()
+    result = panel.showModalDialog()
 
-    # Refresh menu if toolset was created
+    # If OK was pressed, create the preset
     if result:
+        panel._create_preset()
         refresh_toolsets_menu()
 
     return result
