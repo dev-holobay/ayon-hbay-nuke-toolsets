@@ -237,16 +237,16 @@ def setup_toolsets_menu(toolbar):
     # Add delete menu if enabled in settings
     if has_toolsets:
         try:
-            from ayon_core.addon import AddonsManager
-            manager = AddonsManager()
-            addon = manager.get_enabled_addon("hbay_nuke_toolsets")
+            from ayon_api import get_addon_settings
+            from ..version import __version__
 
-            if addon:
-                settings = addon.get_studio_settings()
-                if settings.get("enable_delete_mode", False):
-                    menu.addCommand("-", "", "")
-                    delete_menu = menu.addMenu("Delete", "ToolsetDelete.png")
-                    _populate_toolsets_menu(delete_menu, delete_mode=True)
+            studio_settings = get_addon_settings("hbay_nuke_toolsets",
+                                                 str(__version__))
+
+            if studio_settings.get("enable_delete_mode", False):
+                menu.addCommand("-", "", "")
+                delete_menu = menu.addMenu("Delete", "ToolsetDelete.png")
+                _populate_toolsets_menu(delete_menu, delete_mode=True)
         except Exception as e:
             log.warning(f"Failed to check delete mode setting: {e}")
 

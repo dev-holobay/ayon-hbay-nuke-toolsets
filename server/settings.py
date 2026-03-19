@@ -10,7 +10,7 @@ class HbayNukeToolsetsSettings(BaseSettingsModel):
     )
 
     toolsets_path_template: str = SettingsField(
-        "{root[work]}/sharedToolSets",
+        "{root[work]}/{project[name]}/sharedToolSets",
         title="Toolsets Path Template",
         description=(
             "Path template for toolset storage using AYON anatomy tokens. "
@@ -29,6 +29,6 @@ class HbayNukeToolsetsSettings(BaseSettingsModel):
 
 DEFAULT_VALUES = {
     "enabled": True,
-    "toolsets_path_template": "{root[work]}/sharedToolSets",
+    "toolsets_path_template": "{root[work]}/{project[name]}/sharedToolSets",
     "enable_delete_mode": False
 }

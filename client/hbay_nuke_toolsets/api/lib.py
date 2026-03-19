@@ -3,8 +3,11 @@
 import os
 import logging
 
-from ayon_core.pipeline import get_current_project_name, Anatomy
-from ayon_core.settings import get_project_settings, get_studio_settings
+from ayon_core.pipeline import Anatomy
+from ayon_api import get_addon_settings
+from ayon_core.settings import get_project_settings
+
+from ..version import __version__
 
 log = logging.getLogger("ayon.hbay_nuke_toolsets")
 
@@ -24,32 +27,26 @@ def get_toolset_sources():
     sources = {}
     import nuke
     try:
-        from ayon_core.addon import AddonsManager
         from ayon_api import get_projects
 
-        manager = AddonsManager()
-        addon = manager.get_enabled_addon("hbay_nuke_toolsets")
-
-        if not addon:
-            log.warning("HBAY Nuke Toolsets addon not found or not enabled")
-            return sources
-
         # Get studio settings
-        # studio_settings = get_studio_settings()
+        studio_settings = get_addon_settings("hbay_nuke_toolsets", str(__version__))
+
         #
-        # if not studio_settings.get("enabled", True):
-        #     log.info("HBAY Nuke Toolsets is disabled in settings")
-        #     return sources
+        if not studio_settings.get("enabled", True):
+            log.info("HBAY Nuke Toolsets is disabled in settings")
+            return sources
 
         # Get all projects user has access to
         projects = get_projects(fields=["name", "code"])
 
         for project in projects:
             project_name = project["name"]
-            nuke.tprint(project_name)
             try:
                 # Get project-specific settings (with studio fallback)
-                project_settings = {} #addon.get_project_settings(project_name)
+                all_project_settings = get_project_settings(project_name)
+                project_settings = all_project_settings[
+                    "hbay_nuke_toolsets"]
 
                 template = project_settings.get(
                     "toolsets_path_template",
@@ -88,7 +85,6 @@ def get_toolset_sources():
     except Exception as e:
         log.error(f"Failed to get toolset sources: {e}", exc_info=True)
 
-    nuke.tprint(sources)
     return sources
 
 
