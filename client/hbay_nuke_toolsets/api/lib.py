@@ -3,10 +3,10 @@
 import os
 import logging
 
-from ayon_core.pipeline import Anatomy
 from ayon_api import get_addon_settings
-from ayon_core.settings import get_project_settings
 
+from ayon_core.pipeline import Anatomy
+from ayon_core.settings import get_project_settings
 from ..version import __version__
 
 log = logging.getLogger("ayon.hbay_nuke_toolsets")
@@ -30,7 +30,8 @@ def get_toolset_sources():
         from ayon_api import get_projects
 
         # Get studio settings
-        studio_settings = get_addon_settings("hbay_nuke_toolsets", str(__version__))
+        studio_settings = get_addon_settings("hbay_nuke_toolsets",
+                                             str(__version__))
 
         #
         if not studio_settings.get("enabled", True):

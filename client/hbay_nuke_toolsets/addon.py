@@ -2,13 +2,13 @@
 
 import os
 
-from ayon_core.addon import AYONAddon, IHostAddon
+from ayon_core.addon import AYONAddon
 from .version import __version__
 
-NUKE_ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+ADDON_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 
-class HbayNukeToolsetsAddon(AYONAddon, IHostAddon):
+class HbayNukeToolsetsAddon(AYONAddon):
     """HBAY Nuke Toolsets client addon.
 
     Provides shared toolsets functionality for Nuke,
@@ -17,23 +17,6 @@ class HbayNukeToolsetsAddon(AYONAddon, IHostAddon):
 
     name = "hbay_nuke_toolsets"
     version = __version__
-    host_name = "nuke"
-
-    def add_implementation_envs(self, env, _app):
-        # Add requirements to NUKE_PATH
-        new_nuke_paths = [
-            os.path.join(NUKE_ROOT_DIR, "startup")
-        ]
-        old_nuke_path = env.get("NUKE_PATH") or ""
-        for path in old_nuke_path.split(os.pathsep):
-            if not path:
-                continue
-
-            norm_path = os.path.normpath(path)
-            if norm_path not in new_nuke_paths:
-                new_nuke_paths.append(norm_path)
-
-        env["NUKE_PATH"] = os.pathsep.join(new_nuke_paths)
 
     def initialize(self, settings):
         """Initialize the addon.
@@ -49,26 +32,4 @@ class HbayNukeToolsetsAddon(AYONAddon, IHostAddon):
         Returns:
             list: Empty list - this addon uses Nuke's native startup system
         """
-        # We use Nuke's native plugin path system via startup/init.py and menu.py
-        # rather than AYON launch hooks
-        return []
-
-    def get_workfile_extensions(self):
-        """Get workfile extensions this addon works with.
-
-        Returns:
-            list: List of file extensions
-        """
-        return [".nk"]
-
-
-def get_addon():
-    """Get addon instance (for compatibility).
-
-    Returns:
-        HbayNukeToolsetsAddon: The addon instance
-    """
-    from ayon_core.addon import AddonsManager
-
-    manager = AddonsManager()
-    return manager.get_enabled_addon("hbay_nuke_toolsets")
+        return [os.path.join(ADDON_ROOT, "hooks")]

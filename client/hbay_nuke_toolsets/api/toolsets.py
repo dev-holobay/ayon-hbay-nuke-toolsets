@@ -10,10 +10,9 @@ import shutil
 import nuke
 import nukescripts
 
-from ayon_core.pipeline import get_current_project_name, get_current_context, Anatomy
-
+from ayon_core.pipeline import get_current_project_name, get_current_context, \
+    Anatomy
 from ayon_core.settings import get_project_settings
-
 from .lib import get_toolset_sources, ensure_folder
 
 log = logging.getLogger("ayon.hbay_nuke_toolsets")
@@ -118,7 +117,8 @@ class CreateToolsetsPanel(nukescripts.PythonPanel):
 
         try:
             # Use Nuke's built-in createToolset function
-            if nuke.createToolset(filename=toolset_name, overwrite=1, rootPath=root):
+            if nuke.createToolset(filename=toolset_name, overwrite=1,
+                                  rootPath=root):
                 # Nuke creates in a ToolSets subdirectory, move it to root
                 temp_path = os.path.join(root, "ToolSets", f"{toolset_name}.nk")
                 final_path = os.path.join(root, f"{toolset_name}.nk")
@@ -200,29 +200,22 @@ def create_toolset_in_context():
         project_name = get_current_project_name()
 
         if not context or not project_name:
-            nuke.message("No AYON context found. Please work in a valid AYON context.")
+            nuke.message(
+                "No AYON context found. Please work in a valid AYON context.")
             return False
 
-        # Build context path from hierarchy
-        context_parts = []
-
-        # Add folder type and name (e.g., assets, shots)
-        if context.get("folder"):
-            folder_data = context["folder"]
-            folder_path = folder_data.get("path", "").strip("/")
-            if folder_path:
-                context_parts.append(folder_path)
-
-        if not context_parts:
-            nuke.message("Cannot determine context path from current AYON context.")
+        if not context.get("folder_path"):
+            nuke.message(
+                "Cannot determine context path from current AYON context.")
             return False
 
-        context_path = "/".join(context_parts)
+        context_path = context.get("folder_path")
 
         all_project_settings = get_project_settings(project_name)
         project_settings = all_project_settings[
             "hbay_nuke_toolsets"]
-        template = project_settings.get("toolsets_path_template", "{root[work]}/{project[name]}/sharedToolSets")
+        template = project_settings.get("toolsets_path_template",
+                                        "{root[work]}/{project[name]}/sharedToolSets")
 
         # Get anatomy and resolve template
         anatomy = Anatomy(project_name)
@@ -232,7 +225,8 @@ def create_toolset_in_context():
         )
 
         # Add context path to base
-        toolset_dir = os.path.join(base_path, context_path).replace("\\", "/")
+        toolset_dir = os.path.join(base_path, context_path.lstrip("/")).replace(
+            "\\", "/")
 
         # Ensure directory exists
         ensure_folder(toolset_dir)
@@ -245,11 +239,8 @@ def create_toolset_in_context():
 
         # Create the toolset
         result = _create_toolset_file(toolset_name, toolset_dir, context_path)
-
         if result:
             refresh_toolsets_menu()
-            nuke.message(f"Toolset created successfully in:\n{context_path}/")
-
         return result
 
     except Exception as e:
@@ -271,9 +262,11 @@ def _create_toolset_file(toolset_name, toolset_dir, context_label=""):
     """
     try:
         # Use Nuke's built-in createToolset function
-        if nuke.createToolset(filename=toolset_name, overwrite=1, rootPath=toolset_dir):
+        if nuke.createToolset(filename=toolset_name, overwrite=1,
+                              rootPath=toolset_dir):
             # Nuke creates in a ToolSets subdirectory, move it to root
-            temp_path = os.path.join(toolset_dir, "ToolSets", f"{toolset_name}.nk")
+            temp_path = os.path.join(toolset_dir, "ToolSets",
+                                     f"{toolset_name}.nk")
             final_path = os.path.join(toolset_dir, f"{toolset_name}.nk")
 
             temp_path = temp_path.replace("\\", "/")
@@ -312,7 +305,8 @@ def delete_toolset(root_path, file_name):
         root_path (str): Root path of the toolset location
         file_name (str): Full path to the toolset file
     """
-    if nuke.ask(f'Are you sure you want to delete ToolSet {os.path.basename(file_name)}?'):
+    if nuke.ask(
+            f'Are you sure you want to delete ToolSet {os.path.basename(file_name)}?'):
         try:
             os.remove(file_name)
             log.info(f"Deleted toolset: {file_name}")
@@ -402,18 +396,19 @@ def _populate_toolsets_menu(menu, delete_mode=False):
             project_menu = menu.addMenu(source_name)
 
             if _create_toolset_menu_items(
-                project_menu,
-                root_path,
-                root_path,
-                delete_mode,
-                all_toolsets_list
+                    project_menu,
+                    root_path,
+                    root_path,
+                    delete_mode,
+                    all_toolsets_list
             ):
                 has_toolsets = True
 
     return has_toolsets
 
 
-def _create_toolset_menu_items(menu, root_path, full_path, delete_mode, all_toolsets_list):
+def _create_toolset_menu_items(menu, root_path, full_path, delete_mode,
+                               all_toolsets_list):
     """Recursively create menu items for toolsets.
 
     Args:
@@ -458,11 +453,11 @@ def _create_toolset_menu_items(menu, root_path, full_path, delete_mode, all_tool
                 all_toolsets_list.append(item)
                 submenu = menu.addMenu(item)
                 if _create_toolset_menu_items(
-                    submenu,
-                    root_path,
-                    new_path,
-                    delete_mode,
-                    all_toolsets_list
+                        submenu,
+                        root_path,
+                        new_path,
+                        delete_mode,
+                        all_toolsets_list
                 ):
                     has_items = True
 

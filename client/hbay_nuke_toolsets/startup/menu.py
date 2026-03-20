@@ -5,11 +5,11 @@ Sets up the shared toolsets menu and functionality.
 """
 
 import logging
+
 import nuke
 
 from hbay_nuke_toolsets.api import (
-    setup_toolsets_menu,
-    refresh_toolsets_menu
+    setup_toolsets_menu
 )
 
 log = logging.getLogger("ayon.hbay_nuke_toolsets")
@@ -23,7 +23,8 @@ def main():
         setup_toolsets_menu(toolbar)
         log.info("Holobay Nuke Toolsets: Menu setup complete")
     except Exception as e:
-        log.error(f"Failed to setup HBAY Nuke Toolsets menu: {e}", exc_info=True)
+        log.error(f"Failed to setup HBAY Nuke Toolsets menu: {e}",
+                  exc_info=True)
 
 
 # Run menu setup
