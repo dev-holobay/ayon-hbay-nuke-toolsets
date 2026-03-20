@@ -1,6 +1,7 @@
 # Holobay Nuke Shared Toolsets
 
 AYON addon providing shared toolsets functionality for Nuke. Allows artists to publish and share Nuke toolsets across projects.
+The projects are actively retreived from Ayon.
 
 ## Features
 
@@ -23,6 +24,9 @@ AYON addon providing shared toolsets functionality for Nuke. Allows artists to p
 
 ## Configuration
 
+![usage example](data/config.jpg)
+
+
 Configure the addon in AYON Studio Settings:
 
 - **Toolsets Path Template**: Template to configure the location of the toolsets under each project
@@ -30,7 +34,7 @@ Configure the addon in AYON Studio Settings:
 
 ## Usage
 
-![config example](data/image.png)
+![usage example](data/image.png)
 
 
 ### Creating a Toolset
