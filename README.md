@@ -1,4 +1,4 @@
-# AYON HBAY Nuke Toolsets
+# Holobay Nuke Shared Toolsets
 
 AYON addon providing shared toolsets functionality for Nuke. Allows artists to publish and share Nuke toolsets across projects with centralized storage.
 
