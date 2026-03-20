@@ -71,7 +71,3 @@ Configure the addon in AYON Studio Settings:
 ### Refreshing the Menu
 
 If toolsets don't appear, use **Nodes → sharedToolSets → Refresh**
-
-## Development
-
-Based on the original `taSharedToolsets` implementation, refactored for AYON addon architecture. 
