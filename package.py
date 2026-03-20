@@ -1,6 +1,6 @@
 name = "hbay_nuke_toolsets"
 title = "Holobay Nuke Toolsets"
-version = "0.1.1"
+version = "0.1.2"
 
 client_dir = "hbay_nuke_toolsets"
 
