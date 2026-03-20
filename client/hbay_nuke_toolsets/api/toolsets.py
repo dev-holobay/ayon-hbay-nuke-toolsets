@@ -327,13 +327,13 @@ def refresh_toolsets_menu():
         log.info("Toolsets menu refreshed")
 
 
-def setup_toolsets_menu(toolbar):
+def setup_toolsets_menu(toolbar, icon_path=None):
     """Setup the shared toolsets menu in Nuke.
 
     Args:
         toolbar: Nuke toolbar menu object
     """
-    menu = toolbar.addMenu("sharedToolSets", "sharedToolSets.png")
+    menu = toolbar.addMenu("sharedToolSets", icon_path)
 
     # Add control commands
     menu.addCommand(
