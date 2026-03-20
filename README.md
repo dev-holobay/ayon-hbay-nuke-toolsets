@@ -1,6 +1,6 @@
 # Holobay Nuke Shared Toolsets
 
-AYON addon providing shared toolsets functionality for Nuke. Allows artists to publish and share Nuke toolsets across projects with centralized storage.
+AYON addon providing shared toolsets functionality for Nuke. Allows artists to publish and share Nuke toolsets across projects.
 
 ## Features
 
@@ -9,29 +9,6 @@ AYON addon providing shared toolsets functionality for Nuke. Allows artists to p
 - **Easy Publishing**: Simple UI panel to publish selected nodes as toolsets
 - **Automatic Menu Integration**: Toolsets automatically appear in Nuke's menu
 - **Delete Mode**: Optional toolset management and deletion capabilities
-
-## Structure
-
-```
-ayon-hbay-nuke-toolsets/
-├── server/                    # Server-side addon code
-│   ├── __init__.py           # Server addon implementation
-│   └── settings.py           # Settings schema
-├── client/                    # Client-side code
-│   └── hbay_nuke_toolsets/
-│       ├── __init__.py       # Client addon entry point
-│       ├── addon.py          # Addon implementation
-│       ├── api/              # Core API
-│       │   ├── lib.py        # Utility functions
-│       │   └── toolsets.py   # Toolset management
-│       ├── startup/          # Nuke startup scripts
-│       │   ├── init.py       # Initial setup
-│       │   └── menu.py       # Menu integration
-│       └── plugins/          # Pipeline plugins
-├── package.py                # Addon metadata
-├── version.py               # Version info
-└── create_package.py        # Package builder
-```
 
 ## Installation
 
@@ -48,12 +25,13 @@ ayon-hbay-nuke-toolsets/
 
 Configure the addon in AYON Studio Settings:
 
-- **Server Prefix**: Network path prefix (e.g., `//server01`)
-- **Project Sources**: List of projects with their toolset storage paths
-- **Local Toolsets Path**: Optional local studio-wide toolsets location
+- **Toolsets Path Template**: Template to configure the location of the toolsets under each project
 - **Enable Delete Mode**: Allow users to delete toolsets from the menu
 
 ## Usage
+
+![config example](data/image.png)
+
 
 ### Creating a Toolset
 
@@ -61,6 +39,7 @@ Configure the addon in AYON Studio Settings:
 2. Open **Nodes → sharedToolSets → Create**
 3. Choose location and name
 4. Click Create
+5. **Create in Context** will use the folder structure from Ayon underneath root to store the toolset
 
 ### Loading a Toolset
 
