@@ -4,7 +4,7 @@ from ayon_applications import PreLaunchHook
 
 
 class HbayNukeToolsetsPreLaunch(PreLaunchHook):
-    app_groups = ["nuke"]  # Apply to nuke applications
+    app_groups = ["nuke", "nukex"]  # Apply to nuke applications
 
     def execute(self):
         # Add your custom NUKE_PATH here
