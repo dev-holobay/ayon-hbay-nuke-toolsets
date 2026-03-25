@@ -54,3 +54,6 @@ Configure the addon in AYON Studio Settings:
 ### Refreshing the Menu
 
 If toolsets don't appear, use **Nodes → sharedToolSets → Refresh**
+
+### Todo
+- Maybe add support for sitesync and publish to Ayon as representations
