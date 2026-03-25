@@ -7,7 +7,7 @@
 
 [project]
 name = "ayon-hbay-nuke-toolsets
-version = "0.1.2"
+version = "0.1.3"
 description = "Holobay Nuke Toolsets"
 license = "Apache-2.0"
 readme = "README.md"
